@@ -1,0 +1,109 @@
+{
+  "id": "@ryu/teams",
+  "name": "Teams",
+  "version": "1.0.0",
+  "category": "Communication",
+  "description": "Teams: named groups of agents you can address as one. Governance shell over the in-crate teams store (agent-id membership only); no documents, no external dependencies. Runs the out-of-process ryu-teams sidecar; Core proxies /api/teams/* to it.",
+  "tagline": "Address a group of agents as one",
+  "keywords": ["teams", "agents", "collaboration", "groups"],
+  "icon": "user-group",
+  "iconDither": { "from": 245, "to": 279, "direction": "left" },
+  "surfaces": {
+    "gateway": { "support": "none" },
+    "core": { "support": "full" },
+    "desktop": { "support": "full" },
+    "island": { "support": "full" },
+    "mobile": { "support": "full" },
+    "extension": { "support": "full" },
+    "web": { "support": "full" },
+    "cli": { "support": "full" }
+  },
+  "engines": {
+    "ryu": ">=0.1.0"
+  },
+  "runnables": [],
+  "sidecars": [
+    {
+      "name": "ryu-teams",
+      "process": {
+        "kind": "local",
+        "command": "ryu-teams",
+        "command_env": "RYU_TEAMS_BIN",
+        "port_env": "RYU_TEAMS_PORT"
+      },
+      "port": 7994,
+      "health_path": "/health",
+      "http": {
+        "mount": "/api/teams",
+        "public_mount": "/api/teams",
+        "routes": [
+          { "path": "/" },
+          { "path": "/:id" },
+          { "path": "/:id/members" },
+          { "path": "/:id/members/:agent_id" }
+        ]
+      }
+    }
+  ],
+  "permission_grants": [],
+  "permission_levels": [
+    {
+      "id": "teams.view",
+      "label": "Can view",
+      "description": "See agent teams and which agents belong to each."
+    },
+    {
+      "id": "teams.manage",
+      "label": "Can manage",
+      "description": "Create teams and change their membership, which decides which agents answer when a team is addressed as one.",
+      "implies": ["teams.view"]
+    }
+  ],
+  "contributes": {
+    "hook_events": [
+      {
+        "id": "@ryu/teams#team.created",
+        "title": "Team created",
+        "description": "A new team was persisted, from the desktop, the API, or Core's own agent-builder. Fires exactly once per team, on the insert that mints its id — a failed create does not fire. The payload is the team record as `GET /api/teams/{id}` returns it, so a brand-new team may already carry members (they can be supplied at create time) and its `coordination` defaults to `broadcast`.",
+        "payload_example": {
+          "id": "team_9f3c1b2a4d5e6f708192a3b4c5d6e7f8",
+          "name": "Research",
+          "description": "paper readers",
+          "members": ["acp:claude", "ryu"],
+          "coordination": "debate-synthesis",
+          "lead_agent_id": "ryu",
+          "created_at": "2026-08-01T09:12:44.512340118+00:00",
+          "updated_at": "2026-08-01T09:12:44.512340118+00:00"
+        }
+      },
+      {
+        "id": "@ryu/teams#team.updated",
+        "title": "Team changed",
+        "description": "A team's configuration changed — renamed, re-described, its coordination strategy or lead agent swapped, or an agent added to / removed from its roster. Fires for BOTH the full patch (`PATCH /api/teams/{id}`) and the incremental member endpoints the desktop's drag-an-agent-into-a-team gesture uses, so \"when an agent joins a team\" never misses a path. Both member endpoints are idempotent, and a re-add of an existing member (or a remove of one who was never on the team) changes nothing and does not fire. The payload is the team AFTER the change, not a diff; compare `members` against your own last-seen copy to see who moved.",
+        "payload_example": {
+          "id": "team_9f3c1b2a4d5e6f708192a3b4c5d6e7f8",
+          "name": "Research",
+          "description": "paper readers",
+          "members": ["acp:claude", "ryu", "acp:codex"],
+          "coordination": "round-robin",
+          "created_at": "2026-08-01T09:12:44.512340118+00:00",
+          "updated_at": "2026-08-01T11:47:02.881204553+00:00"
+        }
+      },
+      {
+        "id": "@ryu/teams#team.deleted",
+        "title": "Team deleted",
+        "description": "A team was removed. Fires only when a row was actually deleted, so deleting an id that does not exist is silent. The payload is the team as it stood immediately BEFORE the delete — captured then because nothing can look it up afterwards — which is what lets a consumer clean up per-team or per-member state it was holding.",
+        "payload_example": {
+          "id": "team_9f3c1b2a4d5e6f708192a3b4c5d6e7f8",
+          "name": "Research",
+          "description": "paper readers",
+          "members": ["acp:claude", "ryu"],
+          "coordination": "broadcast",
+          "created_at": "2026-08-01T09:12:44.512340118+00:00",
+          "updated_at": "2026-08-01T11:47:02.881204553+00:00"
+        }
+      }
+    ]
+  }
+}

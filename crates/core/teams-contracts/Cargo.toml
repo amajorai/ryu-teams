@@ -1,0 +1,18 @@
+[package]
+name = "ryu-teams-contracts"
+version = "0.1.6"
+edition = "2021"
+license = "Apache-2.0"
+description = "Shared wire types for Ryu agent teams: the `TeamRecord` / `CreateTeam` payloads and the `Coordination` strategy enum exchanged over `/api/teams/*` between Core's `@team` chat orchestration and the out-of-process `ryu-teams` sidecar that owns `teams.db`. Dep-light (serde only) and with ZERO dependency on apps/core, so both sides can link it without either linking the other."
+repository = "https://github.com/amajorai/ryu"
+
+# serde ONLY, on purpose. The teams payloads carry no `ToSchema` derives (the
+# sidecar's `#[utoipa::path]`s declare `serde_json::Value` bodies) and no
+# `DateTime` (`created_at`/`updated_at` are `Option<String>`), so neither `utoipa`
+# nor `chrono` belongs here. Keeping the dep set at one crate is what lets Core
+# link this without inheriting `rusqlite`/`axum`/`uuid` from the sidecar crate.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

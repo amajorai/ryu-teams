@@ -1,0 +1,54 @@
+[package]
+name = "ryu-teams"
+version = "0.2.3"
+edition = "2021"
+license = "Apache-2.0"
+description = "Agent teams for Ryu (a named, ordered collection of agents + a coordination strategy, addressed as one unit via @team): the SQLite store + `/api/teams/*` HTTP surface, shipped as an OUT-OF-PROCESS sidecar that is the single owner of teams.db. Core does not link this crate — it reaches the store over loopback HTTP and shares only the wire types in `ryu-teams-contracts`. ZERO dependency on apps/core; the store's only host coupling (the data-dir path) is injected at open time."
+repository = "https://github.com/amajorai/ryu"
+
+# The out-of-process sidecar binary — the ONLY way this crate runs. Core spawns it
+# (`kind: local`, sibling on PATH / `RYU_TEAMS_BIN`), health-checks it, and proxies
+# `/api/teams/*` to it on loopback — exactly like `ryu-mail`. This bin is the process
+# shell around the crate's `routes()` + `TeamStore`, and it is the single owner of
+# `teams.db`: Core no longer links the lib, so there is no in-process build to skew
+# against.
+[[bin]]
+name = "ryu-teams"
+path = "src/main.rs"
+
+# Versions are matched to apps/core/Cargo.toml as a convention across the workspace
+# (one shared build of each dep in the virtual workspace's target/), not because of
+# any in-process merge — there is none. This crate has ZERO dependency on apps/core.
+[dependencies]
+ryu-sidecar-runtime = { path = "../crates/core/sidecar-runtime", version = "0.2.3" }
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+rusqlite = { version = "0.40.0", features = ["bundled"] }
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+# App-event emit client: raises the `team.created` / `team.updated` / `team.deleted`
+# events declared in this app's manifest, so hooks and workflows can react to a
+# roster change without polling `/api/teams`. This does NOT break the
+# ZERO-dependency-on-apps/core invariant above: it is a standalone crate holding only
+# the outbound half of the emit call (an HTTP POST to Core's `events.emit`
+# capability), so it links none of Core. Emitting is best-effort and no-ops when the
+# process is not Core-hosted, so the standalone binary and this crate's tests are
+# unaffected. The `version` alongside the path is what lets the published satellite
+# tree — which has no sibling `crates/` — resolve it from the registry instead.
+ryu-app-events = { path = "../crates/core/app-events", version = "0.2.3" }
+# The `/api/teams/*` wire contract — `TeamRecord` / `CreateTeam` / `Coordination`,
+# re-exported from `store.rs`. Core links the SAME crate (path-only) for its `@team`
+# orchestration, which is what lets the two halves agree on the payload shape and the
+# kebab-case strategy table without either linking the other. Same `version`-alongside-
+# `path` requirement as `ryu-app-events` above.
+ryu-teams-contracts = { path = "../crates/core/teams-contracts", version = "0.2.3" }
+# Sidecar-binary-only deps (data-dir resolution + logging), mirroring `ryu-mail`.
+# Core already pulls all of these, so there is no new dependency in the in-process
+# build.
+dirs = "5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

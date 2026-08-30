@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ryu.teams",
+  "version": "0.1.14",
+  "description": "Groups: named collections of agents you can address as one. Governance shell over the agent-group store (agent-id membership only); no documents, no external dependencies. Runs the out-of-process group sidecar.",
+  "author": {
+    "name": "Ryu",
+    "url": "https://ryuhq.com"
+  },
+  "homepage": "https://github.com/amajorai/ryu-teams",
+  "repository": "https://github.com/amajorai/ryu-teams",
+  "keywords": ["groups", "agents", "collaboration", "teams"],
+  "extensions": {
+    "com.ryuhq.ryu": {
+      "id": "@ryu/teams",
+      "displayName": "Groups"
+    }
+  }
+}
